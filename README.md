@@ -89,19 +89,6 @@ The ergonomic command:
 /loop stop
 ```
 
-Behavior:
-
-- 0 active loops: shows `No active loops`
-- 1 active loop: stops it immediately
-- 2+ active loops: opens a picker so you can choose which one to stop
-
-Power-user forms:
-
-```txt
-/loop stop all
-/loop stop <id-or-prefix>
-```
-
 Examples:
 
 ```txt
@@ -123,7 +110,6 @@ They stop when the current pi process/session ends, including:
 - `/resume`
 - `/fork`
 - `/reload`
-- a crash
 
 They are **not** persisted to the session JSONL and are **not** restored later.
 
@@ -167,10 +153,6 @@ agent finishes
 agent finishes
 → loop C prompt runs
 ```
-
-### Current provider/model
-
-`pi-loop` is provider-agnostic. It sends a normal user message with `pi.sendUserMessage()`, so the prompt goes to whichever model/provider is currently selected, including custom providers such as Nairi.
 
 ## Footer status
 
