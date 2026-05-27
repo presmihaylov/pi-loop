@@ -1,5 +1,5 @@
 {
-  "name": "pi-loop",
+  "name": "@presmihaylov/pi-loop",
   "version": "0.1.0",
   "description": "Simple in-session recurring prompt loops for pi-coding-agent.",
   "type": "module",

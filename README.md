@@ -12,7 +12,13 @@ Simple in-session recurring prompt loops for [pi](https://pi.dev).
 
 ## Install
 
-From GitHub:
+From npm:
+
+```bash
+pi install npm:@presmihaylov/pi-loop
+```
+
+Or install from GitHub:
 
 ```bash
 pi install git:github.com/presmihaylov/pi-loop
@@ -21,7 +27,7 @@ pi install git:github.com/presmihaylov/pi-loop
 Or try it for one run:
 
 ```bash
-pi -e git:github.com/presmihaylov/pi-loop
+pi -e npm:@presmihaylov/pi-loop
 ```
 
 If you already have pi running after installing, run:
