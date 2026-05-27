@@ -1,6 +1,6 @@
 # pi-loop
 
-Simple in-session recurring prompt loops for [pi](https://pi.dev) / `@earendil-works/pi-coding-agent`.
+Simple in-session recurring prompt loops for [pi](https://pi.dev).
 
 `pi-loop` adds a minimal `/loop` command that sends the same prompt repeatedly while your current pi session is open.
 
