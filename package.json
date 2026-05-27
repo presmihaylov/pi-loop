@@ -1,0 +1,31 @@
+{
+  "name": "pi-loop",
+  "version": "0.1.0",
+  "description": "Simple in-session recurring prompt loops for pi-coding-agent.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-coding-agent",
+    "pi-extension",
+    "loop",
+    "scheduler"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/presmihaylov/pi-loop.git"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "files": [
+    "extensions",
+    "README.md",
+    "LICENSE"
+  ]
+}
