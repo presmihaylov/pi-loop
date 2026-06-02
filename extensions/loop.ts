@@ -1,8 +1,18 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 
 const STATUS_KEY = "pi-loops";
 const MIN_INTERVAL_MS = 1_000;
+
+const startLoopParameters = Type.Object({
+	interval: Type.String({
+		description: "Recurring interval using s, m, or h units, e.g. 30s, 5m, 1h.",
+	}),
+	prompt: Type.String({
+		description: "Prompt to send each time the loop runs.",
+	}),
+});
 
 type LoopStatus = "active" | "due" | "running";
 
@@ -17,6 +27,25 @@ type Loop = {
 	status: LoopStatus;
 	dueAt?: number;
 	timer?: ReturnType<typeof setTimeout>;
+};
+
+type StartLoopOutcome =
+	| {
+			ok: true;
+			loop: Loop;
+		}
+	| {
+			ok: false;
+			message: string;
+		};
+
+type StartLoopToolDetails = {
+	loopId: string;
+	interval: string;
+	nextRunIn: string;
+	promptPreview: string;
+	scope: "session";
+	warning?: string;
 };
 
 export default function (pi: ExtensionAPI) {
@@ -170,6 +199,30 @@ export default function (pi: ExtensionAPI) {
 		updateStatus();
 	}
 
+	function startLoopFromParts(intervalToken: string, promptText: string, ctx?: ExtensionContext): StartLoopOutcome {
+		const intervalMs = parseInterval(intervalToken);
+		const prompt = promptText.trim();
+		if (intervalMs === undefined || intervalMs < MIN_INTERVAL_MS || prompt.length === 0) {
+			return { ok: false, message: usage() };
+		}
+
+		const now = Date.now();
+		const loop: Loop = {
+			id: createId(),
+			prompt,
+			intervalMs,
+			createdAt: now,
+			nextRunAt: now + intervalMs,
+			runCount: 0,
+			status: "active",
+		};
+
+		loops.set(loop.id, loop);
+		scheduleLoop(loop, now);
+		updateStatus(ctx);
+		return { ok: true, loop };
+	}
+
 	function startLoop(args: string, ctx: ExtensionCommandContext): void {
 		const trimmed = args.trim();
 		const spaceIndex = trimmed.indexOf(" ");
@@ -179,27 +232,14 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		const intervalToken = trimmed.slice(0, spaceIndex);
-		const prompt = trimmed.slice(spaceIndex + 1).trim();
-		const intervalMs = parseInterval(intervalToken);
-		if (!intervalMs || intervalMs < MIN_INTERVAL_MS || !prompt) {
-			ctx.ui.notify(usage(), "warning");
+		const prompt = trimmed.slice(spaceIndex + 1);
+		const result = startLoopFromParts(intervalToken, prompt, ctx);
+		if (!result.ok) {
+			ctx.ui.notify(result.message, "warning");
 			return;
 		}
 
-		const loop: Loop = {
-			id: createId(),
-			prompt,
-			intervalMs,
-			createdAt: Date.now(),
-			nextRunAt: Date.now() + intervalMs,
-			runCount: 0,
-			status: "active",
-		};
-
-		loops.set(loop.id, loop);
-		scheduleLoop(loop, Date.now());
-		ctx.ui.notify(`Started loop ${loop.id}\nEvery ${formatInterval(intervalMs)} · next in ${formatIn(intervalMs)}`, "info");
-		updateStatus(ctx);
+		ctx.ui.notify(`Started loop ${result.loop.id}\nEvery ${formatInterval(result.loop.intervalMs)} · next in ${formatIn(result.loop.intervalMs)}`, "info");
 	}
 
 	function listLoops(ctx: ExtensionCommandContext): void {
@@ -293,6 +333,46 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		processDueLoops(ctx);
+	});
+
+	pi.registerTool<typeof startLoopParameters, StartLoopToolDetails>({
+		name: "start_loop",
+		label: "Start Loop",
+		description: "Start a recurring in-session pi prompt loop. Use only when the user explicitly asks for a recurring or periodic action.",
+		promptSnippet: "start_loop(interval, prompt): start a session-scoped recurring prompt loop.",
+		promptGuidelines: [
+			"Use start_loop only when the user explicitly asks for a recurring or periodic action.",
+			"Loops are session-scoped and stop when pi exits, reloads, or switches sessions.",
+			"In short-lived subagents, start_loop creates a loop only inside that child runtime; it does not create a durable parent loop.",
+		],
+		parameters: startLoopParameters,
+		executionMode: "sequential",
+		execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
+			latestCtx = ctx;
+			const result = startLoopFromParts(params.interval, params.prompt, ctx);
+			if (!result.ok) {
+				throw new Error(result.message);
+			}
+
+			const subagentWarning = process.env.PI_SUBAGENT_CHILD === "1" ? "\n\nNote: this appears to be a subagent child process, so the loop is scoped to this child runtime." : "";
+			const text = [
+				`Started loop ${result.loop.id}`,
+				`Every ${formatInterval(result.loop.intervalMs)} · next in ${formatIn(result.loop.intervalMs)}`,
+				"Loops are session-scoped and stop when pi exits, reloads, or switches sessions.",
+			].join("\n");
+
+			return {
+				content: [{ type: "text", text: `${text}${subagentWarning}` }],
+				details: {
+					loopId: result.loop.id,
+					interval: formatInterval(result.loop.intervalMs),
+					nextRunIn: formatIn(result.loop.intervalMs),
+					promptPreview: preview(result.loop.prompt),
+					scope: "session",
+					warning: subagentWarning.trim() !== "" ? subagentWarning.trim() : undefined,
+				},
+			};
+		},
 	});
 
 	pi.registerCommand("loop", {

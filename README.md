@@ -10,6 +10,8 @@ Simple in-session recurring prompt loops for [pi](https://pi.dev).
 /loop stop
 ```
 
+It also exposes a `start_loop` tool so agents can create loops themselves when you explicitly instruct them to do recurring work.
+
 ## Install
 
 From npm:
@@ -35,6 +37,29 @@ If you already have pi running after installing, run:
 ```txt
 /reload
 ```
+
+## Agent tool
+
+`pi-loop` registers an LLM-callable tool named `start_loop`.
+
+Agents should use it only when you explicitly ask for a recurring or periodic action, for example:
+
+```txt
+Every 5 minutes, check CI and fix failures until it passes.
+```
+
+Tool parameters:
+
+- `interval` - interval using `s`, `m`, or `h`, e.g. `30s`, `5m`, `1h`
+- `prompt` - prompt to send each time the loop runs
+
+The tool uses the same in-memory scheduler as `/loop`, so tool-created loops are listed by `/loops` and stopped by `/loop stop`.
+
+### Subagents
+
+If a short-lived subagent calls `start_loop`, the loop is scoped to that child pi process and usually ends when the child exits. For durable loops, have the main/orchestrator agent start the loop.
+
+For `pi-subagents`, normal extensions are loaded when an agent omits the `extensions` field. If an agent uses a `tools` allowlist, include `start_loop`. If it uses an `extensions` allowlist, include this extension there too.
 
 ## Commands
 
@@ -182,7 +207,7 @@ This extension is deliberately small:
 - no one-shot reminders
 - no dynamic/self-paced mode
 - no persistence after session close
-- no LLM-callable scheduling tools
+- no durable parent-loop routing from short-lived subagents
 
 For full cron-style scheduling, use a larger scheduler extension. `pi-loop` is for lightweight recurring prompts during the session you are already working in.
 

@@ -15,6 +15,9 @@
     "url": "git+https://github.com/presmihaylov/pi-loop.git"
   },
   "license": "MIT",
+  "dependencies": {
+    "typebox": "^1.1.38"
+  },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
   },
